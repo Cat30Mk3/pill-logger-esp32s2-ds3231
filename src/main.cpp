@@ -20,10 +20,17 @@ void setup()
     // Get wake cause early to determine setup path
     esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
 
-    // Initialize display early (before Serial/CDC delay) if NOT a timer wake
-    if (wakeCause != ESP_SLEEP_WAKEUP_TIMER)
+    // Initialize display unconditionally — Wire.begin(33,35) must run on ALL boot/wake paths.
+    // The DS3231 RTC is on the same I2C bus and cannot be accessed until Wire.begin() has run.
+    // u8g2.begin() (called inside initDisplay) is what triggers Wire.begin(SDA=33, SCL=35).
+    // On timer wakes the display is put to sleep immediately after init to keep the display dark.
+    initDisplay();
+    if (wakeCause == ESP_SLEEP_WAKEUP_TIMER)
     {
-        initDisplay();
+        u8g2.setPowerSave(1); // Keep display dark — timer wake is housekeeping only, no UI needed
+    }
+    else
+    {
         g_current_setup_state = SETUP_STATE_SERIAL_WAIT;
         renderSetupScreen(SETUP_INITIALIZATION);
     }
