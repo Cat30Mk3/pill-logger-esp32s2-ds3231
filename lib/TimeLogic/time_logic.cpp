@@ -21,52 +21,40 @@ void setSystemTimeBad() {
 
 void in_setup_assess_ntp_sync_needed(esp_sleep_wakeup_cause_t cause)
 {
-//setSystemTimeBad(); // Debug: Force bad system time to test NTP sync logic in setup
+    // DS3231 Enhancement: system time is always valid after rtc_clock_begin().
+    // The obsolete "invalid system time < compile timestamp" check has been removed —
+    // the DS3231 coin-cell battery guarantees a valid clock on every boot and wake.
+    //
+    // NTP is now only needed for periodic weekly calibration of DS3231 drift.
+    // This applies equally to all wake causes (timer, button, cold boot).
+    // On first-ever boot last_ntp_sync_timestamp == 0, so the interval check
+    // naturally evaluates to true and triggers an initial NTP sync.
 
-    // for call within setup() to assess whether NTP sync is needed and setup RTC state accordingly based on wakeup cause and time since last sync
-    if (cause == ESP_SLEEP_WAKEUP_TIMER || cause == ESP_SLEEP_WAKEUP_EXT0 || cause == ESP_SLEEP_WAKEUP_EXT1) // did we wake from deepSleep?
+    DBG_PRINTLN("[In_setup] Assessing NTP sync need (DS3231 time source)");
+    printLocalTime();
+
+    if (getUtcTime() - rtc_fast_state.last_ntp_sync_timestamp > NTP_REFRESH_INTERVAL_SECONDS)
     {
-        DBG_PRINTLN("[In_setup] Woke from deep sleep, assessing if NTP sync needed");
-        rtc_fast_state.last_ntp_sync_reason = 0;
-        printLocalTime();
-        //    if (getLocalTime_Tm().tm_year < 2026) // Is system time bad? *** see future enhancement note above - this is a crude check for invalid time based on compile time, but we should implement a more robust solution in the future
-        if (getUtcTime() < pdata.last_compile_timestamp) // Is system time bad? *** see future enhancement note above - this is a crude check for invalid time based on compile time, but we should implement a more robust solution in the future
+        // Weekly refresh interval exceeded — calibrate DS3231 against NTP.
+        if (cause == ESP_SLEEP_WAKEUP_UNDEFINED)
         {
-            DBG_PRINTLN("[In_setup] System time appears to be invalid, will attempt NTP sync");
-            rtc_fast_state.last_ntp_sync_reason = 1; // 1 = sync needed due to invalid system time
-            printLocalTime();
-            DBG_PRINT("[In_setup] Current UTC time: ");
-            DBG_PRINTLN(getUtcTime());
-            DBG_PRINT("[In_setup] Current UTC time: ");
-            printUTCTime();
-            DBG_PRINT("[In_setup] compile time: ");
-            DBG_PRINTLN(pdata.last_compile_timestamp);
-            rtc_fast_state.live_clock_synced = false;
-            return;
+            rtc_fast_state.last_ntp_sync_reason = 3; // reboot/power-on + interval expired
+            DBG_PRINTLN("[In_setup] Cold boot — NTP refresh interval exceeded, sync needed");
         }
-
-        if (getUtcTime() - rtc_fast_state.last_ntp_sync_timestamp > NTP_REFRESH_INTERVAL_SECONDS) // is it time for periodic NTP sync?
+        else
         {
+            rtc_fast_state.last_ntp_sync_reason = 2; // periodic refresh (any deep-sleep wake)
             DBG_PRINTLN("[In_setup] Periodic NTP sync needed");
-            rtc_fast_state.last_ntp_sync_reason = 2; // 2 = sync needed due to periodic refresh
-            rtc_fast_state.live_clock_synced = false;
-            return;
         }
-        rtc_fast_state.live_clock_synced = true;
-        DBG_PRINTLN("[In_setup] Woke from deep sleep but NTP sync not needed yet");
-        return;
-    }
-    else // must be a reboot, or program load
-    {
         rtc_fast_state.live_clock_synced = false;
         rtc_fast_state.ntp_backoff_active = false;
         rtc_fast_state.ntp_backoff_start_ms = 0;
-        rtc_fast_state.last_ntp_sync_reason = 3; // 3 = sync needed due to reboot or program load
-
-
-        DBG_PRINTLN("[In_setup] Not waking from deep sleep, will attempt NTP sync");
+        return;
     }
-    return;
+
+    // NTP sync not due yet — DS3231 is the current time source, no sync needed.
+    rtc_fast_state.live_clock_synced = true;
+    DBG_PRINTLN("[In_setup] NTP sync not needed — DS3231 time is current");
 }
 
 void in_loop_assess_ntp_sync_needed()
