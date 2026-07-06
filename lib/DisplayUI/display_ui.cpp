@@ -12,6 +12,7 @@
 #include "time_logic.h"
 #include "core_system.h"
 #include "battery.h"
+#include "rtc_clock.h"   // rtc_clock_is_ok() for DS3231 status indicator on Screen 5
 
 // ============ DISPLAY STATE ============
 static uint8_t currentScreenIndex = 0;
@@ -293,7 +294,11 @@ void renderScreen(uint8_t index)
 
         drawCentered("5-NTP Stat", 10, u8g2_font_6x10_tf);
         drawCentered(syncLine, 20, u8g2_font_6x10_tf);
-        drawCentered(statusLine, 30, u8g2_font_6x10_tf);
+        // Line 3: NTP status left-aligned + DS3231 health right-aligned (5x8 font to fit both)
+        u8g2.setFont(u8g2_font_5x8_tr);
+        u8g2.drawStr(2, 30, statusLine);
+        const char* rtcTag = rtc_clock_is_ok() ? "RTC:OK" : "RTC:BAD";
+        u8g2.drawStr(126 - u8g2.getStrWidth(rtcTag), 30, rtcTag);
         break;
     }
 
