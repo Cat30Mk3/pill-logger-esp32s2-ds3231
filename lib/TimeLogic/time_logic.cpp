@@ -5,6 +5,7 @@
 #include "globals.h"
 #include "data_store.h"
 #include "display_ui.h"
+#include "rtc_clock.h"   // DS3231 write-back after successful NTP sync
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include <esp_sleep.h>
@@ -214,6 +215,7 @@ boolean ntp_sync_attempt()
         rtc_fast_state.ntp_retry_count = 0;
         rtc_fast_state.ntp_backoff_count = 0;
         rtc_fast_state.live_clock_synced = true;
+        rtc_clock_sync_rtc_from_system(); // Update DS3231 with NTP-accurate time
     }
     else
     {
@@ -288,6 +290,7 @@ bool ntp_sync_only()
         rtc_fast_state.ntp_retry_count = 0;
         rtc_fast_state.ntp_backoff_count = 0;
         rtc_fast_state.live_clock_synced = true;
+        rtc_clock_sync_rtc_from_system(); // Update DS3231 with NTP-accurate time
         WiFi.disconnect();
         return true;
     }
