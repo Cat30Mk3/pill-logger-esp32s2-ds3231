@@ -39,8 +39,8 @@ struct PersistentData
 typedef struct __attribute__((packed))
 {
     uint32_t magic;
-    uint32_t last_unix;
-    uint32_t last_tick;
+    uint32_t last_unix;   // retained for struct layout compatibility — time restoration now via DS3231
+    uint32_t last_tick;   // retained for struct layout compatibility — time restoration now via DS3231
     char last_wifi_ssid[32];
     int8_t last_wifi_rssi;
     uint32_t last_ntp_sync_timestamp;

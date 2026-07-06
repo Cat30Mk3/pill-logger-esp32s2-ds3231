@@ -20,7 +20,7 @@ static_assert(wifi_credentials_count > 0, "At least one WiFi credential is requi
 // moved to platfoirmio.ini to avoid rebuilds on version change
 
 // ===================== NTP/Time Sync Parameters =====================
-#define NTP_REFRESH_INTERVAL_SECONDS         1 * 24 * 60 * 60  // once per day (RC oscillator drift makes weekly interval too long)
+#define NTP_REFRESH_INTERVAL_SECONDS         7 * 24 * 60 * 60  // weekly — DS3231 holds accurate time between syncs
 #define NTP_RETRY_BACKOFF_INTERVAL_SECONDS   3600 //once per hour
 #define NTP_RETRY_COUNT_MAX                 5  // number of retries before backoff issociated with each retry attempt, reset on successful sync
 #define TIMEZONE_RULE "EST5EDT,M3.2.0/2,M11.1.0/2" // Eastern Time with DST
