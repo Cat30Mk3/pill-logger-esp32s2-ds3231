@@ -1,4 +1,4 @@
-// This is Milestone 4-E - working?? with setup screens
+// DS3231 Enhancement Version 2 — based on Milestone 4-E production code
 
 #include <Arduino.h>
 #include <esp_sleep.h>
@@ -8,6 +8,7 @@
 #include "data_store.h"
 #include "display_ui.h"
 #include "battery.h"
+#include "rtc_clock.h"   // DS3231 RTC — must be called after initDisplay()
 #include <SPI.h>
 
 void setup()
@@ -20,10 +21,14 @@ void setup()
     // Get wake cause early to determine setup path
     esp_sleep_wakeup_cause_t wakeCause = esp_sleep_get_wakeup_cause();
 
-    // Initialize display unconditionally — Wire.begin(33,35) must run on ALL boot/wake paths.
-    // The DS3231 RTC is on the same I2C bus and cannot be accessed until Wire.begin() has run.
-    // u8g2.begin() (called inside initDisplay) is what triggers Wire.begin(SDA=33, SCL=35).
-    // On timer wakes the display is put to sleep immediately after init to keep the display dark.
+    // ---------------------------------------------------------------
+    // MANDATORY STARTUP SEQUENCE — order must never change:
+    //   1. initDisplay()       Wire.begin(SDA=33, SCL=35) runs here
+    //   2. rtc_clock_begin()   DS3231 init — needs Wire already up
+    //                          Sets ESP32 system clock from DS3231.
+    //                          Hard-stops with OLED alert if DS3231
+    //                          coin-cell battery is dead.
+    // ---------------------------------------------------------------
     initDisplay();
     if (wakeCause == ESP_SLEEP_WAKEUP_TIMER)
     {
@@ -34,6 +39,10 @@ void setup()
         g_current_setup_state = SETUP_STATE_SERIAL_WAIT;
         renderSetupScreen(SETUP_INITIALIZATION);
     }
+
+    // Restore ESP32 system clock from DS3231 on EVERY wake/boot path.
+    // This call also checks DS3231 battery health and hard-stops if dead.
+    rtc_clock_begin();
 
 #if SERIAL_DEBUG_ENABLE
     renderSetupScreen(SETUP_STATE_SERIAL_WAIT);
