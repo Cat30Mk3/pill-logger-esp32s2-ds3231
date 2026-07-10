@@ -92,7 +92,7 @@ static_assert(wifi_credentials_count > 0, "At least one WiFi credential is requi
 #define VBAT_ERROR_DISPLAY 9.99f    // Voltage displayed on error
 
 // === LED Control Macro ===
-#define LED_ENABLE 1 // Set to 1 to enable LED output; default OFF (rely on OLED for status)
+#define LED_ENABLE 0 // Set to 1 to enable LED output; default OFF (rely on OLED for status)
 
 // === Setup State Enum ===
 enum SetupState {
@@ -105,11 +105,10 @@ enum SetupState {
 
 // === Serial debug macros ===
 // // Set to 1 to enable Serial prints and debug delays
-#ifndef SERIAL_DEBUG_ENABLE
-  #define SERIAL_DEBUG_ENABLE 1
-#endif
 
-#if defined(SERIAL_DEBUG_ENABLE) && (SERIAL_DEBUG_ENABLE)
+#define SERIAL_DEBUG_ENABLE 0
+
+#if (SERIAL_DEBUG_ENABLE)
   #define DBG_PRINT(x)    Serial.print(x)
   #define DBG_PRINTLN(x) Serial.println(x)
   #define DBG_PRINTF(...) Serial.printf(__VA_ARGS__)  //example of variadic macro for printf    
